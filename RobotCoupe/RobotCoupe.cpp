@@ -10,7 +10,7 @@
 #include "XNucleoIHM02A1.h"
 
 /* file header file */
-#include "RobotCoupe.h"
+#include "RobotCoupe.hpp"
 
 
 /* Definitions ---------------------------------------------------------------*/
@@ -87,17 +87,20 @@ L6470_init_t L6470_init[L6470DAISYCHAINSIZE] = {
 };
 
 
-/* Robots mesurements (in mm)*/
-float robotWidth = 245.72;
-float wheelRadius = 73.025;
-
 /* ---------------------------------------------------------------------*/
 RobotCoupe::RobotCoupe(){
 
 }
 
-void RobotCoupe::begin(){
+float robotWidth = 245.72;
+float wheelRadius = 73.025;
+
+void RobotCoupe::begin(robotWidth, wheelRadius){
     /*----- Initialization. -----*/
+
+    /* Initializing robot width and wheel radius*/
+    RobotCoupe::set_baseWidth(robotWidth);
+    RobotCoupe::set_wheelRadius(wheelRadius);
 
     /* Initializing SPI bus. */
     dev_spi = new SPIClass(D11, D12, D3);
@@ -107,6 +110,28 @@ void RobotCoupe::begin(){
 
     /* Building a list of motor control components. */
     motors = x_nucleo_ihm02a1->get_components();
+}
+
+/* Setters and Getters -------------------------------------------------------*/
+
+void RobotCoupe::set_x(float x){
+    _x = x;
+}
+
+void RobotCoupe::set_y(float y){
+    _y = y;
+}
+
+void RobotCoupe::set_theta(float theta){
+    _theta = theta;
+}
+
+void RobotCoupe::set_baseWidth(float baseWidth){
+    _baseWidth = baseWidth;
+}
+
+void RobotCoupe::set_wheelRadius(float wheelRadius){
+    _wheelRadius = wheelRadius;
 }
 
 /* loop ----------------------------------------------------------------------*/
