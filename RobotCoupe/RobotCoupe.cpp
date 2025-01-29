@@ -38,7 +38,7 @@ L6470_init_t L6470_init[L6470DAISYCHAINSIZE] = {
         300.0,                         /* Motor initial speed [step/s]. */
         500.0,                         /* Motor acceleration [step/s^2] (comment for infinite acceleration mode). */
         500.0,                         /* Motor deceleration [step/s^2] (comment for infinite deceleration mode). */
-        992.0,                         /* Motor maximum speed [step/s]. */
+        700,                         /* Motor maximum speed [step/s]. */
         0.0,                           /* Motor minimum speed [step/s]. */
         602.7,                         /* Motor full-step speed threshold [step/s]. */
         3.06,                          /* Holding kval [V]. */
@@ -66,7 +66,7 @@ L6470_init_t L6470_init[L6470DAISYCHAINSIZE] = {
         300.0,                         /* Motor initial speed [step/s]. */
         500.0,                         /* Motor acceleration [step/s^2] (comment for infinite acceleration mode). */
         500.0,                         /* Motor deceleration [step/s^2] (comment for infinite deceleration mode). */
-        992.0,                         /* Motor maximum speed [step/s]. */
+        700,                         /* Motor maximum speed [step/s]. */
         0.0,                           /* Motor minimum speed [step/s]. */
         602.7,                         /* Motor full-step speed threshold [step/s]. */
         3.06,                          /* Holding kval [V]. */
@@ -91,10 +91,6 @@ L6470_init_t L6470_init[L6470DAISYCHAINSIZE] = {
 RobotCoupe::RobotCoupe(){
 
 }
-
-float robotWidth = 245.72;
-float wheelRadius = 73.025;
-
 void RobotCoupe::begin(robotWidth, wheelRadius){
     /*----- Initialization. -----*/
 
@@ -140,7 +136,7 @@ void RobotCoupe::move_straight (char direction, float distance){
     /* Move robot in a straight line
      * direction :  1 for Forward
      *              0 for Backward */
-    long m_steps = MICRO_STEPS * distance / (2 * 3.14 * wheelRadius); // Implicit conversion
+    long m_steps = MICRO_STEPS * distance / (2 * PI * _wheelRadius); // Implicit conversion
     motors[0]->prepare_move(direction?(StepperMotor::FWD):(StepperMotor::BWD), m_steps);
     motors[1]->prepare_move(direction?(StepperMotor::FWD):(StepperMotor::BWD), m_steps);
     x_nucleo_ihm02a1->perform_prepared_actions();
@@ -150,8 +146,8 @@ void RobotCoupe::rotate (int direction, float angle){
     /* Rotate robot in place
      * direction :  0 for left rotation (anti-clockwise)
      *              1 for right rotation (clockwise) */
-    float distance = PI * angle * robotWidth / 360;
-    long m_steps = MICRO_STEPS * distance / (2 * wheelRadius); // Implicit conversion
+    float distance = PI * angle * _robotWidth / 360;
+    long m_steps = MICRO_STEPS * distance / (2 * PI * _wheelRadius); // Implicit conversion
     motors[0]->prepare_move(direction?(StepperMotor::FWD):(StepperMotor::BWD), m_steps);
     motors[1]->prepare_move(direction?(StepperMotor::BWD):(StepperMotor::FWD), m_steps);
     x_nucleo_ihm02a1->perform_prepared_actions();
