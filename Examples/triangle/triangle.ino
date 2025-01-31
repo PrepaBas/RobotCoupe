@@ -1,10 +1,10 @@
 #include "RobotCoupe.h"
 #include "XNucleoIHM02A1.h"
 
-RobotCoupe robot(263, 34);
+RobotCoupe robot;
 
 void setup(){
-    robot.begin();
+    robot.begin(263, 36);
     
 }
 
