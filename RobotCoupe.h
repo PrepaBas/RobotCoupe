@@ -1,4 +1,4 @@
-/*
+  /*
   RobotCoupe.h - Library for controling 2 weeled robots using XNucleoIHM02A1.
   Created by Bastien T. France, january, 2025.
   Released into the public domain.
