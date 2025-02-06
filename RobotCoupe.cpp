@@ -17,7 +17,7 @@
 
 /* Number of steps. */
 #define STEPS 200   /* 1 revolution given a 400 steps motor configured at 1/128 microstep mode. */
-#define MICRO_STEPS STEPS * 128
+#define MICRO_STEPS STEPS * 16
 
 /* Variables -----------------------------------------------------------------*/
 
@@ -31,13 +31,13 @@ L6470_init_t L6470_init[L6470DAISYCHAINSIZE] = {
     /* First Motor. */
     {
         9.0,                           /* Motor supply voltage in V. */
-        STEPS,                           /* Min number of steps per revolution for the motor. */
-        2.0,                           /* Max motor phase voltage in A. */
+        400,                           /* Min number of steps per revolution for the motor. */
+        1.7,                           /* Max motor phase voltage in A. */
         3.06,                          /* Max motor phase voltage in V. */
         300.0,                         /* Motor initial speed [step/s]. */
         500.0,                         /* Motor acceleration [step/s^2] (comment for infinite acceleration mode). */
         500.0,                         /* Motor deceleration [step/s^2] (comment for infinite deceleration mode). */
-        700,                         /* Motor maximum speed [step/s]. */
+        992.0,                         /* Motor maximum speed [step/s]. */
         0.0,                           /* Motor minimum speed [step/s]. */
         602.7,                         /* Motor full-step speed threshold [step/s]. */
         3.06,                          /* Holding kval [V]. */
@@ -51,7 +51,7 @@ L6470_init_t L6470_init[L6470DAISYCHAINSIZE] = {
         0,                             /* Thermal compensation factor (range [0, 15]). */
         3.06 * 1000 * 1.10,            /* Ocd threshold [ma] (range [375 ma, 6000 ma]). */
         3.06 * 1000 * 1.00,            /* Stall threshold [ma] (range [31.25 ma, 4000 ma]). */
-        StepperMotor::STEP_MODE_1_128, /* Step mode selection. */
+        StepperMotor::STEP_MODE_1_16, /* Step mode selection. */
         0xFF,                          /* Alarm conditions enable. */
         0x2E88                         /* Ic configuration. */
     },
@@ -59,13 +59,13 @@ L6470_init_t L6470_init[L6470DAISYCHAINSIZE] = {
     /* Second Motor. */
     {
         9.0,                           /* Motor supply voltage in V. */
-        STEPS,                           /* Min number of steps per revolution for the motor. */
-        2.0,                           /* Max motor phase voltage in A. */
+        400,                           /* Min number of steps per revolution for the motor. */
+        1.7,                           /* Max motor phase voltage in A. */
         3.06,                          /* Max motor phase voltage in V. */
         300.0,                         /* Motor initial speed [step/s]. */
         500.0,                         /* Motor acceleration [step/s^2] (comment for infinite acceleration mode). */
         500.0,                         /* Motor deceleration [step/s^2] (comment for infinite deceleration mode). */
-        700,                         /* Motor maximum speed [step/s]. */
+        992.0,                         /* Motor maximum speed [step/s]. */
         0.0,                           /* Motor minimum speed [step/s]. */
         602.7,                         /* Motor full-step speed threshold [step/s]. */
         3.06,                          /* Holding kval [V]. */
@@ -79,7 +79,7 @@ L6470_init_t L6470_init[L6470DAISYCHAINSIZE] = {
         0,                             /* Thermal compensation factor (range [0, 15]). */
         3.06 * 1000 * 1.10,            /* Ocd threshold [ma] (range [375 ma, 6000 ma]). */
         3.06 * 1000 * 1.00,            /* Stall threshold [ma] (range [31.25 ma, 4000 ma]). */
-        StepperMotor::STEP_MODE_1_128, /* Step mode selection. */
+        StepperMotor::STEP_MODE_1_16, /* Step mode selection. */
         0xFF,                          /* Alarm conditions enable. */
         0x2E88                         /* Ic configuration. */
     }
@@ -93,7 +93,7 @@ RobotCoupe::RobotCoupe(){
 
 void RobotCoupe::begin(float baseWidth, float wheelRadius){
     /*----- Initialization. -----*/
-
+    Serial.begin(9600);
     /* Initializing robot width and wheel radius*/
     RobotCoupe::set_baseWidth(baseWidth);
     RobotCoupe::set_wheelRadius(wheelRadius);
@@ -146,8 +146,8 @@ void RobotCoupe::rotate (int direction, float angle){
     /* Rotate robot in place
      * direction :  0 for left rotation (anti-clockwise)
      *              1 for right rotation (clockwise) */
-    float distance = PI * angle * _baseWidth / 360;
-    float m_steps = MICRO_STEPS * distance / (2 * PI * _wheelRadius);
+    float distance = angle * _baseWidth / 360;
+    float m_steps = MICRO_STEPS * distance / (2 * _wheelRadius);
     motors[0]->prepare_move(direction?(StepperMotor::FWD):(StepperMotor::BWD), m_steps);
     motors[1]->prepare_move(direction?(StepperMotor::BWD):(StepperMotor::FWD), m_steps);
     x_nucleo_ihm02a1->perform_prepared_actions();
@@ -161,14 +161,30 @@ void RobotCoupe::wait_stop (){
 void RobotCoupe::go_to(struct position pos){
     /* Move robot to coordinates.
      * First rotate then move in straight line */
+    Serial.print("Starting from : "); Serial.print(_position.x); Serial.print(" ");  Serial.print(_position.y); Serial.print(" "); Serial.print(_position.theta);
+    Serial.print("go_to\n");
+    Serial.print(pos.x); Serial.print("\n");
+    Serial.print(pos.y); Serial.print("\n");
     float x = pos.x - _position.x;
     float y = pos.y - _position.y;
     float radius = sqrt(x*x+y*y);
-    float angle = atan(y/(x + radius))*360/PI - _position.theta;
-    RobotCoupe::rotate(-1, angle);
+    float angle = atan2(y, x)*360/(2 * PI);
+    Serial.print("valeur de l'angle : "); Serial.print(angle); Serial.print("radius : "); Serial.print(radius); Serial.print("\n");
+    float move_angle = angle - _position.theta;
+    if(move_angle >= 0){
+        RobotCoupe::rotate(1, move_angle);
+    }
+    else{
+        RobotCoupe::rotate(0, - move_angle);
+    }
     RobotCoupe::wait_stop();
     RobotCoupe::move_straight(0, radius);
     RobotCoupe::wait_stop();
+
+    // Update new position
+    RobotCoupe::set_x(pos.x);
+    RobotCoupe::set_y(pos.y);
+    RobotCoupe::set_theta(angle);
 }
 
 struct table {
@@ -180,7 +196,7 @@ struct table {
 };
 
 
-table table_coupe = {{100, 100}, {200, 100}, {100, 300}, {200, 300}, {300, 400}};
+table table_coupe = {{800, 800}, {800, 1200}, {2200, 800}, {2200, 1200}, {3000, 2000}};
 
 position corner_positon(int c){
     switch(c){
@@ -195,7 +211,7 @@ position corner_positon(int c){
     }
 }
 
-char what_zone (struct position pos) {
+int what_zone (struct position pos) {
     
     if (pos.x < table_coupe.bl.x){
         if(pos.y < table_coupe.bl.y) 
@@ -239,8 +255,10 @@ char what_zone (struct position pos) {
 
 void RobotCoupe::follow_to(struct position pos){
     /* Zones finding */
-    char start_zone = what_zone(_position);
-    char end_zone = what_zone(pos);
+    int start_zone = what_zone(_position);
+    Serial.print("\n*** Start zone is "); Serial.print(start_zone); Serial.print(" *** \n");
+    int end_zone = what_zone(pos);
+    Serial.print("\n*** End zone is "); Serial.print(end_zone); Serial.print(" *** \n");
 
 
     /* Place robot to nearest point in circulation path*/
@@ -250,27 +268,34 @@ void RobotCoupe::follow_to(struct position pos){
     else if(start_zone== 1){
         struct position destination = {_position.x, table_coupe.bl.y};
         RobotCoupe::go_to(destination);
+        RobotCoupe::wait_stop();
     }
     else if(start_zone== 2){
-        RobotCoupe::go_to(table_coupe.tl);
+        RobotCoupe::go_to(table_coupe.br);
+        RobotCoupe::wait_stop();
     }
     else if(start_zone== 3){
         struct position destination = {table_coupe.br.x, _position.y};
         RobotCoupe::go_to(destination);
+        RobotCoupe::wait_stop();
     }
     else if(start_zone== 4){
         RobotCoupe::go_to(table_coupe.tr);
+        RobotCoupe::wait_stop();
     }
     else if(start_zone== 5){
         struct position destination = {_position.x, table_coupe.tr.y};
         RobotCoupe::go_to(destination);
+        RobotCoupe::wait_stop();
     }
     else if(start_zone== 6){
-        RobotCoupe::go_to(table_coupe.br);
+        RobotCoupe::go_to(table_coupe.tl);
+        RobotCoupe::wait_stop();
     }
     else if(start_zone== 7){
         struct position destination = {table_coupe.bl.x, _position.y};
         RobotCoupe::go_to(destination);
+        RobotCoupe::wait_stop();
     }
     /* Robot is now on circulation path */
 
@@ -298,49 +323,56 @@ void RobotCoupe::follow_to(struct position pos){
         }
     }
     /* rotation direction found */
-
+    Serial.print("\n*** Circulation direction is "); Serial.print(rotation_direction); Serial.print(" ***\n");
     /* circulating robot following circulation path */
     int x_zone = start_zone;
     while(x_zone != end_zone){
+        x_zone = (x_zone - rotation_direction)%8;
         if(x_zone%2 == 0){ // next zone is a corner
-            go_to(corner_positon(x_zone));
+            RobotCoupe::go_to(corner_positon(x_zone));
+            RobotCoupe::wait_stop();
         }
-        x_zone = (x_zone + rotation_direction)%8;
+        Serial.print("\n*** Now in zone "); Serial.print(x_zone); Serial.print(" ***\n");
     }
+    Serial.print("\n*** End of circulation zone is"); Serial.print(x_zone); Serial.print(" ***\n");
     /* Robot stopped at nearest corner from desired zone */
 
     /* last movement is to go to end position*/
     if(end_zone== 0){
         RobotCoupe::go_to(pos);
     }
-    else if(start_zone== 1){
+    else if(end_zone== 1){
         struct position destination = {pos.x, table_coupe.bl.y};
         RobotCoupe::go_to(destination);
+        RobotCoupe::wait_stop();
         RobotCoupe::go_to(pos);
     }
     else if(end_zone== 2){
         RobotCoupe::go_to(pos);
     }
-    else if(start_zone== 3){
+    else if(end_zone== 3){
         struct position destination = {table_coupe.br.x, pos.y};
         RobotCoupe::go_to(destination);
+        RobotCoupe::wait_stop();
         RobotCoupe::go_to(pos);
     }
-    else if(start_zone== 4){
-        RobotCoupe::go_to(table_coupe.tr);
+    else if(end_zone== 4){
+        RobotCoupe::go_to(pos);
     }
-    else if(start_zone== 5){
+    else if(end_zone== 5){
         struct position destination = {pos.x, table_coupe.tr.y};
         RobotCoupe::go_to(destination);
+        RobotCoupe::wait_stop();
         RobotCoupe::go_to(pos);
     }
-    else if(start_zone== 6){
-        RobotCoupe::go_to(table_coupe.br);
+    else if(end_zone== 6){
+        RobotCoupe::go_to(pos);
     }
-    else if(start_zone== 7){
+    else if(end_zone== 7){
         struct position destination = {table_coupe.bl.x, pos.y};
         RobotCoupe::go_to(destination);
+        RobotCoupe::wait_stop();
         RobotCoupe::go_to(pos);
     }
-    
+    /* Robot is at desired position */
 }
